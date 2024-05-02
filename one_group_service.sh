@@ -13,7 +13,6 @@ function work_with_group(){
 1 - вывести список всех студентов группы
 2 - получить контактную информацию студента
 3 - добавить студента
-3 - изменить контактную информацию студента
 4 - удалить студента
 5 - проставить посещяемость
 6 - просмотреть посещяемость
@@ -31,11 +30,10 @@ function work_with_group(){
                 create_student $group_code
                 ;;
             4)
-                read -p "Введите название группы, которую хотите удалить: " name
-                
+                delete_student $group_code                
                 ;;
             5)
-                echo 5
+                mark_attendance $group_code
                 ;;
             6)
                 echo 6
@@ -58,9 +56,10 @@ function get_all_students(){
     if [[ $(jq -e 'map(select(length > 0)) | length == 0' $data_folder/$group_code.json) == "true" ]]
     then
         echo "В этой группе еще нет ни одного студента!"
+        return 1
     else
-        echo "Список студентов (Фамилия Имя Номер телефона): "
-        jq -r '.[] | .surname + " " + .name + " " + .phone_number' $data_folder/$group_code.json
+        echo "Список студентов (Фамилия, имя, номер телефона): "
+        jq -r '.[] | .surname + ", " + .name + ", " + .phone_number' $data_folder/$group_code.json
     fi
 }
 
@@ -78,9 +77,9 @@ function get_student(){
         return 1
     fi
 
-    echo "Контактная информация студента: "
-    jq --arg surname "$surname" --arg name "$name" '
-    .[] | select(.surname == $surname and .name == $name) | .surname + " " + .name + " " + .phone_number' $data_folder/$group_code.json
+    echo "Контактная информация студента (Фамилия, имя, возраст, номер телефона, почта): "
+    jq -r --arg surname "$surname" --arg name "$name" '
+    .[] | select(.surname == $surname and .name == $name) | [.surname, .name, .age, .phone_number, .email] | join(", ")' $data_folder/$group_code.json
 }
 
 function create_student(){
@@ -103,6 +102,7 @@ function create_student(){
     read -p "Электронная почта: " email
 
     touch $student_file_location
+    echo "[]" >> $student_file_location
 
     jq --arg surname "$surname" --arg name "$name" --arg age "$age" --arg phone_number "$phone_number" --arg email "$email" '. += [{ 
     "surname": $surname, 
@@ -116,7 +116,63 @@ function create_student(){
     echo "Студент $surname $name добавлен в группу!"
 }
 
-function group_exist(){
+function delete_student() {
+    group_code=$1
+
+    echo "Введите фамилию и имя студента, которого хотите удалить."
+    read -p "Фамилия: " surname
+    read -p "Имя: " name
+
+    student_file_location="$data_folder/$group_code/$surname$name.json"
+
+    if ! student_exit $student_file_location
+    then
+        echo "Студент $surname $name не найден в группе $group_code!"
+        return 1
+    fi
+
+    rm $student_file_location
+    jq --arg surname "$surname" --arg name "$name" 'map(select(.surname != $surname or .name != $name))' $data_folder/$group_code.json > tmp.json && mv tmp.json $data_folder/$group_code.json
+    echo "Студент $surname $name удален из группы!"
+}
+
+function mark_attendance(){
+    group_code=$1
+
+    if ! get_all_students $group_code > /dev/null
+    then
+        echo "В группе $group_code еще нет студентов."
+        return 1
+    fi
+
+    group_file_db=$data_folder/$group_code.json
+    echo "Для отметки присутствия студентов проставьте символы д (присутствовал) или н (не присутствовал)."
+
+    for line in $(jq -r '.[] | .surname + "_" + .name' $group_file_db)
+    do
+        line=$(echo "$line" | tr '_' ' ')
+        while true
+        do
+            read -p "$line: " response
+            line=$(echo "$line" | tr -d ' ')
+            student_db=$data_folder/$group_code/$line.json
+
+            if [[ $response =~ ^[дн]$ ]]
+            then
+                today=$(date +"%d.%m.%Y")
+                jq --arg date "$today" --arg is_attend "$response" '. += [{ 
+                "date": $date, 
+                "is_attend": $is_attend }]' $student_db > tmp.json && mv tmp.json $student_db
+                break
+            else
+                echo "Введен не корректный символ. Повторите еще раз (д/н)."
+            fi
+        done
+    done
+}
+
+
+function group_exist() {
     group_code=$1
 
     if [[ -f $data_folder/$group_code.json ]]
@@ -127,7 +183,7 @@ function group_exist(){
     fi
 }
 
-function student_exit(){
+function student_exit() {
     student_file_location=$1
 
     if [[ -f $student_file_location ]]
