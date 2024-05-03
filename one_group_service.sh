@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. ./attendance.sh
+
 
 function work_with_group(){
     group_code=$1
@@ -36,7 +38,7 @@ function work_with_group(){
                 mark_attendance $group_code
                 ;;
             6)
-                echo 6
+                check_attendance $group_code
                 ;;
             0)  
                 echo "Вы возвращаетесь в главное меню!"
@@ -69,9 +71,9 @@ function get_student(){
     read -p "Введите фамилию студента: " surname
     read -p "Введите имя студента: " name
 
-    student_file_location="$data_folder/$group_code/$surname$name.json"
+    student_db="$data_folder/$group_code/$surname$name.json"
 
-    if ! student_exit $student_file_location
+    if ! student_exit $student_db
     then
         echo "Студент $surname $name не найден в группе $group_code!"
         return 1
@@ -89,9 +91,9 @@ function create_student(){
     read -p "Фамилия: " surname
     read -p "Имя: " name
 
-    student_file_location="$data_folder/$group_code/$surname$name.json"
+    student_db="$data_folder/$group_code/$surname$name.json"
 
-    if student_exit $student_file_location
+    if student_exit $student_db
     then
         echo "Студент $surname $name уже находится в группе $group_code"
         return 0
@@ -101,8 +103,8 @@ function create_student(){
     read -p "Номер телефона: " phone_number
     read -p "Электронная почта: " email
 
-    touch $student_file_location
-    echo "[]" >> $student_file_location
+    touch $student_db
+    echo "[]" >> $student_db
 
     jq --arg surname "$surname" --arg name "$name" --arg age "$age" --arg phone_number "$phone_number" --arg email "$email" '. += [{ 
     "surname": $surname, 
@@ -123,70 +125,25 @@ function delete_student() {
     read -p "Фамилия: " surname
     read -p "Имя: " name
 
-    student_file_location="$data_folder/$group_code/$surname$name.json"
+    student_db="$data_folder/$group_code/$surname$name.json"
 
-    if ! student_exit $student_file_location
+    if ! student_exit $student_db
     then
         echo "Студент $surname $name не найден в группе $group_code!"
         return 1
     fi
 
-    rm $student_file_location
+    rm $student_db
     jq --arg surname "$surname" --arg name "$name" 'map(select(.surname != $surname or .name != $name))' $data_folder/$group_code.json > tmp.json && mv tmp.json $data_folder/$group_code.json
+    jq --arg group_code "$group_code" '.[] |= if .group_code == $group_code then .students_count -= 1 else . end' $groups_db_name > tmp.json && mv tmp.json $groups_db_name
+    
     echo "Студент $surname $name удален из группы!"
 }
 
-function mark_attendance(){
-    group_code=$1
-
-    if ! get_all_students $group_code > /dev/null
-    then
-        echo "В группе $group_code еще нет студентов."
-        return 1
-    fi
-
-    group_file_db=$data_folder/$group_code.json
-    echo "Для отметки присутствия студентов проставьте символы д (присутствовал) или н (не присутствовал)."
-
-    for line in $(jq -r '.[] | .surname + "_" + .name' $group_file_db)
-    do
-        line=$(echo "$line" | tr '_' ' ')
-        while true
-        do
-            read -p "$line: " response
-            line=$(echo "$line" | tr -d ' ')
-            student_db=$data_folder/$group_code/$line.json
-
-            if [[ $response =~ ^[дн]$ ]]
-            then
-                today=$(date +"%d.%m.%Y")
-                jq --arg date "$today" --arg is_attend "$response" '. += [{ 
-                "date": $date, 
-                "is_attend": $is_attend }]' $student_db > tmp.json && mv tmp.json $student_db
-                break
-            else
-                echo "Введен не корректный символ. Повторите еще раз (д/н)."
-            fi
-        done
-    done
-}
-
-
-function group_exist() {
-    group_code=$1
-
-    if [[ -f $data_folder/$group_code.json ]]
-    then
-        return 0
-    else 
-        return 1
-    fi
-}
-
 function student_exit() {
-    student_file_location=$1
+    student_db=$1
 
-    if [[ -f $student_file_location ]]
+    if [[ -f $student_db ]]
     then
         return 0
     else 

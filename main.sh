@@ -23,17 +23,13 @@ do
             get_groups_list
             ;;
         2)
-            read -p "Введите номер группы: " code
-            work_with_one_group $code
+            work_with_one_group
             ;;
         3)
-            read -p "Введите код новой группы: " code
-            read -p "Введите название специализации новой группы: " specialization
-            create_group $code $specialization
+            create_group
             ;;
         4)
-            read -p "Введите код группы, которую хотите удалить: " code
-            delete_group $code
+            delete_group
             ;;
         0)
             ;;

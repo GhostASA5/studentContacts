@@ -4,18 +4,17 @@
 
 
 function get_groups_list(){
-
     if [[ $(jq -e 'map(select(length > 0)) | length == 0' $groups_db_name) == "true" ]]
     then
         echo "Список групп пуст!"
     else
-        echo "Cписок групп:"
-        jq -r '.[] | .group_code + " " + .specialization' $groups_db_name
+        echo "Cписок групп (Код группы, специализация):"
+        jq -r '.[] | .group_code + ", " + .specialization' $groups_db_name
     fi
 }
 
 function work_with_one_group(){
-    group_code=$1
+    read -p "Введите номер группы: " group_code
 
     if ! group_exist $group_code
     then
@@ -27,34 +26,28 @@ function work_with_one_group(){
 }
 
 function create_group() {
-    group_code=$1
-    specialization=$2
-
+    read -p "Введите код новой группы: " group_code
     if group_exist $group_code
     then
         echo "Группа с кодом $group_code существует!"
         return 1
     fi
+    read -p "Введите название специализации новой группы: " specialization
 
     touch $data_folder/$group_code.json
     echo "[]" >> $data_folder/$group_code.json
     mkdir $data_folder/$group_code
 
-    jq --arg group_code "$group_code" --arg specialization "$specialization" --arg file "$data_folder/$group_code.json" '. += [{ 
+    jq --arg group_code "$group_code" --arg specialization "$specialization" '. += [{ 
     "group_code": $group_code, 
     "specialization": $specialization, 
-    "students_count": 0, 
-    "file_location": $file }]' $groups_db_name > tmp.json && mv tmp.json $groups_db_name
+    "students_count": 0 }]' $groups_db_name > tmp.json && mv tmp.json $groups_db_name
 
     echo "Новая группа $group_code создана!"
 }
 
-# function update_group(){
-#     code
-# }
-
 function delete_group(){
-    group_code=$1
+    read -p "Введите код группы, которую хотите удалить: " group_code
 
     if ! group_exist $group_code
     then 
@@ -66,4 +59,15 @@ function delete_group(){
     rm -r $data_folder/$group_code
     jq --arg group_code "$group_code" 'map(select(.group_code != $group_code))' $groups_db_name > tmp.json && mv tmp.json $groups_db_name
     echo "Группа с кодом $group_code удалена!"
+}
+
+function group_exist() {
+    group_code=$1
+
+    if [[ -f $data_folder/$group_code.json ]]
+    then
+        return 0
+    else 
+        return 1
+    fi
 }
