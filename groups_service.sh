@@ -8,8 +8,8 @@ function get_groups_list(){
     then
         echo "Список групп пуст!"
     else
-        echo "Cписок групп (Код группы, специализация):"
-        jq -r '.[] | .group_code + ", " + .specialization' $groups_db_name
+        echo "Cписок групп (Код группы, специализация, количество студентов):"
+        jq -r '.[] | "\(.group_code), \(.specialization), \(.students_count)"' $groups_db_name
     fi
 }
 

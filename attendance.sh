@@ -48,7 +48,17 @@ function check_attendance() {
 
     echo "Для проверки посещаемости введите период, который хотите проверить."
     read -p "Дата начала проверки (в формате дд.мм.гггг): " start_date
-    read -p "Дата конца проверки (в формате дд.мм.гггг): " end_date
+    read -p "Дата окончания проверки (в формате дд.мм.гггг): " end_date
+
+    while true
+    do
+        if check_date_format $start_date $end_date
+        then
+            break
+        fi
+        read -p "Дата начала проверки (в формате дд.мм.гггг): " start_date
+        read -p "Дата окончания проверки (в формате дд.мм.гггг): " end_date
+    done
 
     start_date=$(echo "$start_date" | awk -F '.' '{print $3"-"$2"-"$1}')
     end_date=$(echo "$end_date" | awk -F '.' '{print $3"-"$2"-"$1}')
@@ -69,4 +79,25 @@ function check_attendance() {
     done
 
     echo "Вы просмотрели посещаемость всех студентов."
+}
+
+function check_date_format(){
+    start_date=$1
+    end_date=$2
+
+    date_regex='^[0-9]{2}\.[0-9]{2}\.[0-9]{4}$'
+
+    if [[ ! $start_date =~ $date_regex || ! $end_date =~ $date_regex ]]
+    then
+        echo "Введенные даты не соответствуют формату"
+        return 1
+    fi
+
+    if [[ $start_date > $end_date ]]
+    then
+        echo "Дата окончания проверки не может быть раньше даты начала проверки"
+        return 1
+    fi
+
+    return 0
 }
