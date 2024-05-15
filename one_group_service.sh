@@ -6,11 +6,12 @@
 function work_with_group(){
     group_code=$1
 
+    clear 
     command_numberr=-1
 
     while [[ $command_numberr -ne 0 ]]
     do
-        echo -e "\n"
+
         read -p "Вы находитесь в меню группы $group_code. Выберите команду:
 1 - вывести список всех студентов группы
 2 - получить контактную информацию студента
@@ -24,31 +25,48 @@ function work_with_group(){
         case $command_numberr in
             1)
                 get_all_students $group_code
+                echo "Нажмите любую кнопку, чтобы продолжить"
+                read -s -n 1
                 ;;
             2)
                 get_student $group_code
+                echo "Нажмите любую кнопку, чтобы продолжить"
+                read -s -n 1
                 ;;
             3)
                 create_student $group_code
+                echo "Нажмите любую кнопку, чтобы продолжить"
+                read -s -n 1
                 ;;
             4)
-                delete_student $group_code                
+                delete_student $group_code
+                echo "Нажмите любую кнопку, чтобы продолжить"
+                read -s -n 1                
                 ;;
             5)
                 mark_attendance $group_code
+                echo "Нажмите любую кнопку, чтобы продолжить"
+                read -s -n 1
                 ;;
             6)
                 check_attendance $group_code
+                echo "Нажмите любую кнопку, чтобы продолжить"
+                read -s -n 1
                 ;;
             0)  
                 echo "Вы возвращаетесь в главное меню!"
+                echo "Нажмите любую кнопку, чтобы продолжить"
+                read -s -n 1
                 return 0
                 ;;
             *)
                 echo "Неизвестный номер команды! Повторите попытку"
+                echo "Нажмите любую кнопку, чтобы продолжить"
+                read -s -n 1
                 command_numberr=-1
                 ;;
         esac
+    echo " "
     done
 }
 

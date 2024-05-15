@@ -22,7 +22,8 @@ function work_with_one_group(){
         return 0
     fi
 
-    work_with_group $group_code 
+    work_with_group $group_code
+    clear
 }
 
 function create_group() {
